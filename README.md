@@ -71,6 +71,26 @@ campaign bounds are documented directly in each test file.
 - Repository defaults live in `[profile.default.symbolic]`; inline
   `forge-config` annotations override them per campaign.
 
+## Verified properties
+
+All results are bounded by the current symbolic model and configuration.
+
+| Layer | Verified property |
+| --- | --- |
+| Rule | `deposit` and `receive` increase user WETH, supply, and reserve by the deposited amount. |
+| Rule | `withdraw` burns and returns ETH one-for-one; a round-trip restores the initial ETH balance. |
+| Rule | `transfer` preserves supply, reserve, self-transfer accounting, and unrelated balances. |
+| Rule | `approve` sets allowances; `transferFrom` decreases finite allowances and preserves infinite ones. |
+| Rule | Invalid `withdraw`, `transfer`, and `transferFrom` calls revert atomically; failed ETH delivery also rolls back. |
+| Rule | Forced ETH breaks `reserve == totalSupply` but preserves `reserve >= totalSupply`. |
+| Invariant | `balanceOf(alice) + balanceOf(bobby) == totalSupply` in the closed two-holder model. |
+| Invariant | `address(weth).balance >= totalSupply`, including a forced-ETH surplus. |
+| Invariant | `alice.balance + balanceOf(alice) == initialUserWealth` for deposit/withdraw sequences. |
+| Invariant | `address(weth).balance + alice.balance + bobby.balance == initialTotalEth` in the closed model. |
+
+Stateful relations are checked after every explored prefix up to depth 4. Exact
+actors, exclusions, and measured bounds are documented in the test files.
+
 ## Limitations
 
 - Stateful accounting campaigns use fixed, finite actor sets.
