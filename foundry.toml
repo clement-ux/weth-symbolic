@@ -1,0 +1,38 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+[profile.default.invariant]
+runs = 0
+depth = 0
+
+[profile.default.symbolic]
+solver = "z3"
+# Optional exact command. When set, this overrides `solver`.
+# solver_command = "z3 -in -smt2"
+# Optional solver names or commands to race in parallel. Ignored when
+# `solver_command` is set. Entries with spaces/quotes/backslashes are parsed as
+# argv strings, not shell snippets.
+# solver_portfolio = ["yices", "z3"]
+timeout = 60
+max_depth = 10000
+max_paths = 4096
+exploration_order = "bfs"
+max_solver_queries = 10000
+default_dynamic_length = 2
+max_dynamic_length = 256
+array_lengths = []
+dynamic_lengths = {}
+default_array_lengths = []
+default_bytes_lengths = []
+max_calldata_bytes = 4096
+invariant_depth = 4
+frontier_ids = []
+frontier_pcs = []
+frontier_selectors = []
+symbolic_call_targets = false
+dump_smt = false
+storage_layout = "solidity"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

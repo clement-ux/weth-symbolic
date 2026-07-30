@@ -1,0 +1,20 @@
+# Foundry build, test, and deployment artifacts
+/out/
+/cache/
+/broadcast/
+
+# Coverage artifacts
+/coverage/
+/lcov.info
+
+# Local environment and secrets
+/.env
+/.env.*
+!/.env.example
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
