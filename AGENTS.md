@@ -15,12 +15,12 @@ Use the following Certora specifications as the primary design references for
 ERC-20 accounting work. They are references for property decomposition and
 ghost design, not authority to copy assumptions or claim equivalent coverage.
 
-- [`Certora/Examples` `ERC20Full.spec`](https://github.com/Certora/Examples/blob/master/DEFI/ERC20/certora/specs/ERC20Full.spec)
+- [`Certora/Examples` `ERC20Full.spec`](https://github.com/Certora/Examples/blob/279e55370f969607c922e9eb3089c82911b76a20/DEFI/ERC20/certora/specs/ERC20Full.spec)
   is the closest reference for WETH. It tracks the sum of all balances with a
   `mathint` ghost updated by an `Sstore` hook and checks equality with
   `totalSupply`. It also separates global conservation from recipient,
   third-party, alias, allowance, authorization, revert, and overflow rules.
-- [`OriginProtocol/origin-dollar` OUSD specs](https://github.com/OriginProtocol/origin-dollar/tree/master/certora/specs/OUSD)
+- [`OriginProtocol/origin-dollar` OUSD specs](https://github.com/OriginProtocol/origin-dollar/tree/d2480092a06ebb116d2ce83d94ae318c6168a0d7/certora/specs/OUSD)
   are the reference for more complex accounting. In particular, inspect
   `BalanceInvariants.spec`, `SumOfBalances.spec`, `AccountInvariants.spec`, and
   `OtherInvariants.spec`. They split rebasing and non-rebasing accounting,
@@ -37,9 +37,9 @@ CVL `Sstore`/`Sload` hooks and unbounded mapping sums do not translate directly
 to Foundry symbolic tests. Adapt them with finite-role ghosts and targeted
 stateless rules, and state the resulting under-approximation. Audit every
 `require`, `preserved`, filter, fixed symbolic value, and timeout workaround in
-the reference specs before adopting the same restriction. When a report relies
-on exact reference behavior, record the upstream commit because `master` is
-mutable.
+the reference specs before adopting the same restriction. Keep reference links
+pinned to upstream commits and update them intentionally when adopting newer
+behavior.
 
 ## Working rules
 
@@ -62,20 +62,22 @@ mutable.
 Use two complementary layers:
 
 - Stateless `check*` rules verify one transition or a short fixed sequence with
-  symbolic values and addresses.
+  symbolic values and, where concrete replay is reliable, symbolic addresses.
 - Stateful `invariant*` campaigns verify a structural property after every
   prefix of a bounded, deliberately small transition system.
 
 Use stateless rules for arbitrary addresses, alias cases, finite allowances,
 revert/atomicity behavior, and actor combinations excluded from a stateful
-campaign. Do not expect a stateful campaign to maximize combinations like
-stateful fuzzing.
+campaign. When symbolic mapping keys produce non-replayable counterexamples,
+use a small set of fixed roles, keep the relevant values symbolic, and document
+the resulting address under-approximation. Do not expect a stateful campaign to
+maximize combinations like stateful fuzzing.
 
 Keep each invariant campaign in its own contract, normally in its own file,
 when it needs different handlers, senders, initial state, or symbolic bounds.
-Keep only shared deployment and address definitions in `test/Base.t.sol`.
-Campaign-specific state belongs in that campaign's `setUp()`, never inside the
-invariant function.
+Keep only shared deployment, address definitions, and reusable helper contracts
+in `test/Base.t.sol`. Campaign-specific state belongs in that campaign's
+`setUp()`, never inside the invariant function.
 
 Current layout:
 
@@ -105,6 +107,8 @@ function check_property(uint256 amount, address user) external {
 - Ordinary user reverts terminate the current path.
 - If every explored path reverts, the result is `RevertAll`, not a proof.
 - Prefer reachable setup and concrete, replayable failure conditions.
+- For revert atomicity, capture the expected revert, assert that the call
+  failed, and compare every affected storage and ETH term with its snapshot.
 - Bound dynamic calldata lengths explicitly when the property depends on them.
 
 ## Stateful symbolic invariants
@@ -135,8 +139,10 @@ function handler_transfer(uint96 amount) public {
 ```
 
 This removes an irrelevant sender/selector cross product. Fixed Alice/Bobby/
-Carol roles are nevertheless an under-approximation and must be complemented
-by arbitrary-address and alias-focused stateless rules.
+Carol roles are nevertheless an under-approximation and should be complemented
+by arbitrary-address and alias-focused stateless rules when those symbolic
+mapping accesses replay reliably. Otherwise use explicit fixed-role partitions
+and document the omitted aliases.
 
 Each campaign must document:
 
@@ -182,17 +188,17 @@ These are not executor path counts. Symbolic arguments, Solidity branches,
 reverts, assumptions, calls, and assertions can split each schedule into more
 paths and solver queries.
 
-Historical balance-accounting measurement:
+Measured balance-accounting results:
 
 | Depth | Complete schedules | Prefixes | Executor paths | Solver queries | Solver time |
 |------:|-------------------:|---------:|---------------:|---------------:|------------:|
-| 2 | 16 | 20 | 140 | 177 | ~3.8 s |
-| 3 | 64 | 84 | 588 | 891 | ~208 s |
-| 4 | 256 | 340 | ~2,380 predicted | ~4,300 predicted | unknown |
+| 2 | 9 | 12 | 72 | 139 | 2.074 s |
+| 3 | 27 | 39 | 234 | 462 | 25.054 s |
+| 4 | 81 | 120 | 720 | 1,443 | 193.717 s |
 
-This campaign has `H = 4` and `S = 1`. The depth-4 prediction extrapolates the
-observed seven executor paths per prefix; runtime is not expected to scale
-linearly and the table is not a guarantee.
+This campaign has `H = 3` and `S = 1`. All three rows are measured `PASS`
+results for the current closed two-holder campaign. Runtime does not scale
+linearly, and future backend or test changes can invalidate these measurements.
 
 Before raising bounds:
 
@@ -243,8 +249,10 @@ make symbolic MATCH=invariant
 ```
 
 The `make symbolic` target consumes Forge JSON and shows only symbolic results.
-It exits non-zero for `Incomplete` and confirmed failures. Pass extra Forge
-options through `SYMBOLIC_ARGS`; disable colors with `COLOR=0`.
+It exits non-zero for every non-`PASS` result, including `Incomplete` and
+candidate counterexamples whose replay is not confirmed. Treat a failure as a
+bug only when replay is confirmed. Pass extra Forge options through
+`SYMBOLIC_ARGS`; disable colors with `COLOR=0`.
 
 Always keep `--symbolic` explicit in documentation and reproducible commands.
 Use `--match-test` for function names and `--match-contract` for contracts.
