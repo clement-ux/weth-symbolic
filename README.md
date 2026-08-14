@@ -83,23 +83,25 @@ All results are bounded by the current symbolic model and configuration.
 | Rule | `approve` sets allowances; `transferFrom` decreases finite allowances and preserves infinite ones. |
 | Rule | Invalid `withdraw`, `transfer`, and `transferFrom` calls revert atomically; failed ETH delivery also rolls back. |
 | Rule | Forced ETH breaks `reserve == totalSupply` but preserves `reserve >= totalSupply`. |
-| Invariant | `balanceOf(alice) + balanceOf(bobby) == totalSupply` in the closed two-holder model. |
+| Invariant | A mapping-write ghost tracks every touched holder and remains equal to `totalSupply`. |
 | Invariant | `address(weth).balance >= totalSupply`, including a forced-ETH surplus. |
 | Invariant | `alice.balance + balanceOf(alice) == initialUserWealth` for deposit/withdraw sequences. |
 | Invariant | `address(weth).balance + alice.balance + bobby.balance == initialTotalEth` in the closed model. |
 
-Stateful relations are checked after every explored prefix up to depth 4. Exact
-actors, exclusions, and measured bounds are documented in the test files.
+Stateful relations are checked after every explored prefix up to each campaign's
+configured depth. Balance accounting currently uses symbolic actors at depth 3;
+the other campaigns remain at depth 4. Exact actors, exclusions, and measured
+bounds are documented in the test files.
 
 ## Limitations
 
-- Stateful accounting campaigns use fixed, finite actor sets.
-- A mapping-aware storage hook is still required to maintain a Certora-style
-  ghost sum over every ERC-20 holder.
-- Arbitrary symbolic mapping keys can produce non-replayable counterexamples;
-  affected rules use fixed roles while keeping amounts symbolic.
-- Success-only handlers use reachable prefunding. Revert and atomicity behavior
-  is covered by dedicated stateless rules.
+- Stateful balance accounting quantifies over symbolic actors only to depth 3;
+  increasing that bound can substantially increase solver cost.
+- Arbitrary symbolic mapping keys can still produce non-replayable
+  counterexamples in some stateless rules; affected rules use fixed roles while
+  keeping amounts symbolic.
+- Success-only handlers use assumptions or reachable prefunding. Revert and
+  atomicity behavior is covered by dedicated stateless rules.
 - Forced ETH uses `SELFDESTRUCT` only for its transfer semantics.
 
 ## References
