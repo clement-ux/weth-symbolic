@@ -159,14 +159,17 @@ domain.
 
 ### Accounting properties and ghosts
 
-`sum(balanceOf(known users)) == totalSupply()` proves conservation only within
-the campaign's closed, finite holder model. It can miss a transfer that credits
-the wrong known recipient while preserving the sum.
+Use `registerMappingSstoreHook` on the balance mapping root to maintain a
+revert-aware sum across every holder touched by a campaign. Register the hook
+before setup writes, authenticate callbacks with `msg.sender == address(vm)`,
+and use `symbolic.storage_layout = "zero_init"` when a freshly deployed
+contract and a zero-valued ghost model unwritten mapping entries as zero.
 
-When recipient correctness matters, maintain expected ghost balances and
-supply according to the specification in each successful handler, then compare
-every actual balance and `totalSupply` against its ghost. Use separate stateless
-rules for arbitrary addresses; Foundry cannot enumerate all mapping keys.
+The aggregate proves conservation but not recipient correctness. When recipient
+correctness matters, maintain expected per-account ghost balances according to
+the specification in each successful handler, then compare the relevant actual
+balances against those ghosts. Keep arbitrary-address and alias behavior in
+stateless rules until symbolic stateful replay is reliable for those roles.
 
 Do not use `vm.setArbitraryStorage` on WETH for reachable-state accounting
 invariants. Arbitrary target storage may violate ERC-20 relationships and create
@@ -192,13 +195,13 @@ Measured balance-accounting results:
 
 | Depth | Complete schedules | Prefixes | Executor paths | Solver queries | Solver time |
 |------:|-------------------:|---------:|---------------:|---------------:|------------:|
-| 2 | 9 | 12 | 72 | 139 | 2.074 s |
-| 3 | 27 | 39 | 234 | 462 | 25.054 s |
-| 4 | 81 | 120 | 720 | 1,443 | 193.717 s |
+| 2 | 9 | 12 | 72 | 170 | 7.517 s |
+| 3 | 27 | 39 | 234 | 594 | 193.703 s |
 
-This campaign has `H = 3` and `S = 1`. All three rows are measured `PASS`
-results for the current closed two-holder campaign. Runtime does not scale
-linearly, and future backend or test changes can invalidate these measurements.
+This campaign has `H = 3`, `S = 1`, and symbolic actor arguments for deposit,
+withdraw, and transfer. Both rows are measured `PASS` results; depth 4 has not
+yet been measured for this model. Runtime does not scale linearly, and future
+backend or test changes can invalidate these measurements.
 
 Before raising bounds:
 
