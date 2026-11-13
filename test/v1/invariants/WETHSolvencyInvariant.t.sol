@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.31;
+pragma solidity ^0.8.31;
 
 import {Base, ForceEther} from "../Base.t.sol";
 

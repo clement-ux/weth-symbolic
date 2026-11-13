@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.31;
+pragma solidity ^0.8.31;
 
 import {Test} from "forge-std/Test.sol";
-import {WETH} from "../src/WETH.sol";
+import {WETH} from "../../src/WETH.sol";
 
 contract ForceEther {
     function forceSend(address payable recipient) external {
