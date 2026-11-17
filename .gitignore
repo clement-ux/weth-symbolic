@@ -2,6 +2,7 @@
 /out/
 /cache/
 /broadcast/
+out.log
 
 # Coverage artifacts
 /coverage/
@@ -18,3 +19,6 @@
 .vscode/
 *.swp
 *.swo
+
+# Old files
+/test/v1/
