@@ -19,6 +19,7 @@ out.log
 .vscode/
 *.swp
 *.swo
+tools/
 
 # Old files
 /test/v1/

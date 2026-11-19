@@ -17,9 +17,12 @@ contract Symbolic_WETH_Shared_Test is Test {
 
     function check_deposit(uint256 amount, address account) public {
         // --- Preconditions
+        vm.assume(account != address(weth));
         uint256 balanceBefore = weth.balanceOf(account);
-        //uint256 supplyBefore = weth.totalSupply();
-        //vm.assume(balanceBefore <= supplyBefore);
+        uint256 supplyBefore = weth.totalSupply();
+        vm.assume(balanceBefore <= supplyBefore);
+
+        deal(address(weth), supplyBefore); // Make arbitrary storage real.
 
         // --- Action
         deal(account, amount);
@@ -27,13 +30,20 @@ contract Symbolic_WETH_Shared_Test is Test {
         weth.deposit{value: amount}();
 
         // --- Postconditions
+        // WETH Balances
         uint256 balanceAfter = weth.balanceOf(account);
+        // Keep: without it, a decrease would underflow the subtraction below and revert,
+        // and a reverting path ends silently instead of failing the test.
         assertGe(balanceAfter, balanceBefore);
-        //assertEq(balanceAfter - balanceBefore, amount);
+        assertEq(balanceAfter - balanceBefore, amount);
 
-        //uint256 supplyAfter = weth.totalSupply();
-        //assertGe(supplyAfter, supplyBefore);
-        //assertEq(supplyAfter - supplyBefore, amount);
+        // ETH Balances
+        uint256 ethBalanceAfter = address(weth).balance;
+        assertGe(ethBalanceAfter, supplyBefore); // Same reasoning as above.
+        assertEq(ethBalanceAfter - supplyBefore, amount);
+
+        // Supply
+        assertEq(ethBalanceAfter, weth.totalSupply());
     }
 
     /*
