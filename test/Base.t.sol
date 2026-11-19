@@ -22,7 +22,8 @@ contract Symbolic_WETH_Shared_Test is Test {
         uint256 supplyBefore = weth.totalSupply();
         vm.assume(balanceBefore <= supplyBefore);
 
-        deal(address(weth), supplyBefore); // Make arbitrary storage real.
+        // --- Make arbitrary storage real.
+        deal(address(weth), supplyBefore);
 
         // --- Action
         deal(account, amount);
@@ -38,28 +39,46 @@ contract Symbolic_WETH_Shared_Test is Test {
         assertEq(balanceAfter - balanceBefore, amount);
 
         // ETH Balances
-        uint256 ethBalanceAfter = address(weth).balance;
-        assertGe(ethBalanceAfter, supplyBefore); // Same reasoning as above.
-        assertEq(ethBalanceAfter - supplyBefore, amount);
+        uint256 ethBalanceContractAfter = address(weth).balance;
+        assertGe(ethBalanceContractAfter, supplyBefore); // Same reasoning as above.
+        assertEq(ethBalanceContractAfter - supplyBefore, amount);
 
         // Supply
-        assertEq(ethBalanceAfter, weth.totalSupply());
+        assertEq(ethBalanceContractAfter, weth.totalSupply());
     }
 
-    /*
-        function check_withdraw(uint256 amount, address account) public {
-            // --- Preconditions
-            uint256 balanceBefore = weth.balanceOf(account);
-            uint256 supplyBefore = weth.totalSupply();
+    function check_withdraw(uint256 amount, address account) public {
+        // --- Preconditions
+        vm.assume(account != address(weth));
+        uint256 balanceBefore = weth.balanceOf(account);
+        uint256 supplyBefore = weth.totalSupply();
+        vm.assume(balanceBefore <= supplyBefore);
 
-            // --- Action
-            deal(address(weth), amount);
-            vm.prank(account);
-            weth.withdraw(amount);
+        // --- Make arbitrary storage real.
+        deal(address(weth), supplyBefore);
+        // Pin the account's ETH balance: the symbolic engine reads an arbitrary initial
+        // balance for a symbolic address but credits the withdrawal to an empty account,
+        // so `after - before == amount` yields spurious counterexamples.
+        deal(account, 0);
 
-            // --- Postconditions
-            assertEq(weth.balanceOf(account), balanceBefore - amount);
-            assertEq(weth.totalSupply(), supplyBefore - amount);
-        }
-    */
+        // --- Action
+        vm.prank(account);
+        weth.withdraw(amount);
+
+        // --- Postconditions
+        // WETH Balances
+        uint256 balanceAfter = weth.balanceOf(account);
+        assertGe(balanceBefore, amount);
+        assertEq(balanceBefore - amount, balanceAfter);
+
+        // ETH Balances: Account;
+        assertEq(account.balance, amount);
+        // ETH Balances: WETH
+        uint256 ethBalanceContractAfter = address(weth).balance;
+        assertGe(supplyBefore, amount);
+        assertEq(supplyBefore - amount, ethBalanceContractAfter);
+
+        // Supply
+        assertEq(ethBalanceContractAfter, weth.totalSupply());
+    }
 }
